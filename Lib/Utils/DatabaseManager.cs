@@ -18,7 +18,7 @@ namespace AttackSurfaceAnalyzer.Utils
 {
     public static class DatabaseManager
     {
-        private const string SCHEMA_VERSION = "5";
+        private const string SCHEMA_VERSION = "litedb.1";
         private static bool WriterStarted = false;
         private static ConcurrentBag<LiteCollection<WriteObject>> WriteObjectCollections = new ConcurrentBag<LiteCollection<WriteObject>>();
 
@@ -68,6 +68,8 @@ namespace AttackSurfaceAnalyzer.Utils
                                         t.Milliseconds);
                 Log.Debug("Completed opening database in {0}", answer);
 
+                db.BeginTrans();
+
                 var col = db.GetCollection<WriteObject>("WriteObjects");
 
                 col.EnsureIndex(x => x.IdentityHash);
@@ -95,12 +97,12 @@ namespace AttackSurfaceAnalyzer.Utils
                     FirstRun = false;
                 }
 
-                var res = settings.Count(Query.EQ("Name","SchemaVersion"));
-
-                if (res == 0)
+                if (!settings.Exists(Query.EQ("Name", "SchemaVersion")))
                 {
                     settings.Insert(new Setting() { Name = "SchemaVersion", Value = SCHEMA_VERSION });
                 }
+
+                db.Commit();
             }
             catch (Exception e)
             {
